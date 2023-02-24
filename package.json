@@ -14,6 +14,6 @@
   },
   "homepage": "https://github.com/DevSnowflake/quick.eco-mysql#README",
   "dependencies": {
-    "@yahapi/mysql": "^0.1.3"
+    "mysql2": "^3.1.2"
   }
 }
