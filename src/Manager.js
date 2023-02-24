@@ -66,7 +66,7 @@ class MySQL extends EventEmitter {
         return new Promise(async (resolve, reject) => {
             if (!this.mysql) {
                 try {
-                    conn = mysql.creatPool(Object.assign(this.connection));
+                    conn = mysql.createPool(Object.assign(this.connection));
 
                     this.emit('debug', 'connecting...');
 
