@@ -1,7 +1,9 @@
-const mysql = require('@yahapi/mysql');
+const mysql = require('mysql2');
 const { EventEmitter } = require('events');
 const Util = require('./Util')
 const Options = Util.OPTIONS
+
+var conn = null;
 
 class MySQL extends EventEmitter {
     /**
@@ -64,14 +66,14 @@ class MySQL extends EventEmitter {
         return new Promise(async (resolve, reject) => {
             if (!this.mysql) {
                 try {
-                    mysql.connect(Object.assign(this.connection, this.additionalOptions));
+                    conn = mysql.creatPool(Object.assign(this.connection));
 
                     this.emit('debug', 'connecting...');
 
                     this.mysql = mysql;
                     this.connected = true;
 
-                    const { user, database, host, port} = this.connection
+                    const { user, database, host, port } = this.connection
 
                     this.emit('debug', await Util.CONNECTED_MESSAGE(user, database, host, port));
 
@@ -92,9 +94,9 @@ class MySQL extends EventEmitter {
      * @private
      * @ignore
      */
-    _createTable () {
-        return mysql.query(`CREATE TABLE IF NOT EXISTS ${this.table} (ID VARCHAR(255) UNIQUE NOT NULL, data INT NOT NULL)`);
-        
+    _createTable() {
+        return conn.query(`CREATE TABLE IF NOT EXISTS ${this.table} (ID VARCHAR(255) UNIQUE NOT NULL, data INT NOT NULL)`);
+
     }
 
     /**
@@ -102,9 +104,9 @@ class MySQL extends EventEmitter {
      * @param {object} rdata Data
      * @returns {Promise<any>}
      */
-    write (rdata) {
+    write(rdata) {
         return new Promise((resolve, reject) => {
-            if(this.connected === false) return reject(new Error('Not connected to MySQL database'));
+            if (this.connected === false) return reject(new Error('Not connected to MySQL database'));
 
             const { ID, data } = rdata;
 
@@ -112,11 +114,11 @@ class MySQL extends EventEmitter {
 
             this._createTable();
 
-            mysql.query(`INSERT INTO \`${this.table}\` (\`ID\`, \`data\`) VALUES (?, ?);`, [ID, data],  (err, rows) => {
-                if(err) {
+            conn.query(`INSERT INTO \`${this.table}\` (\`ID\`, \`data\`) VALUES (?, ?);`, [ID, data], (err, rows) => {
+                if (err) {
                     this.update(rdata)
-                    .then(resolve)
-                    .catch(reject);
+                        .then(resolve)
+                        .catch(reject);
                 }
 
                 resolve(rows);
@@ -132,16 +134,15 @@ class MySQL extends EventEmitter {
      */
     read(id) {
         return new Promise((resolve, reject) => {
-            if(this.connected === false) return reject(new Error('Not connected to MySQL database'));
+            if (this.connected === false) return reject(new Error('Not connected to MySQL database'));
             if (!id || typeof id !== 'string') return reject(new Error('Invalid ID'));
 
             this._createTable();
 
-            mysql.query(`SELECT * FROM \`${this.table}\` WHERE \`ID\` = ?`, [id], (err, res) => {
-                if(err) return reject(err);
+            conn.query(`SELECT * FROM \`${this.table}\` WHERE \`ID\` = ?`, [id], (err, res) => {
+                if (err) return reject(err);
                 resolve(res[0])
             })
-            
         })
     }
 
@@ -152,7 +153,7 @@ class MySQL extends EventEmitter {
      */
     update(rdata = {}) {
         return new Promise((resolve, reject) => {
-            if(this.connected === false) return reject(new Error('Not connected to MySQL database'));
+            if (this.connected === false) return reject(new Error('Not connected to MySQL database'));
 
             const { ID, data } = rdata;
 
@@ -160,12 +161,11 @@ class MySQL extends EventEmitter {
 
             this._createTable();
 
-            mysql.query(`UPDATE \`${this.table}\` SET \`data\` = ? WHERE \`ID\` = ?`, [data, ID],  (err, rows) => {
-                if(err) return reject(err);
+            conn.query(`UPDATE \`${this.table}\` SET \`data\` = ? WHERE \`ID\` = ?`, [data, ID], (err, rows) => {
+                if (err) return reject(err);
 
                 resolve(rows);
             })
-
         })
     }
 
@@ -174,15 +174,15 @@ class MySQL extends EventEmitter {
      * @param {string} user User 
      * @returns {Promise<boolean>}
      */
-    delete (user) {
-        return new Promise ((resolve, reject) => {
-            if(this.connected === false) return reject(new Error('Not connected to MySQL database'));
+    delete(user) {
+        return new Promise((resolve, reject) => {
+            if (this.connected === false) return reject(new Error('Not connected to MySQL database'));
             if (!user || typeof user !== 'string') return reject(new Error('Invalid ID'));
 
             this._createTable();
 
-            mysql.query(`DELETE FROM \`${this.table}\` WHERE ID = ?`, [user], (err, res) => {
-                if(err) return reject(err);
+            conn.query(`DELETE FROM \`${this.table}\` WHERE ID = ?`, [user], (err, res) => {
+                if (err) return reject(err);
 
                 resolve(true);
             })
@@ -193,14 +193,14 @@ class MySQL extends EventEmitter {
      * Returns all data
      * @returns {Promise<any>}
      */
-    readAll () {
+    readAll() {
         return new Promise((resolve, reject) => {
-            if(this.connected === false) return reject(new Error('Not connected to MySQL database'));
+            if (this.connected === false) return reject(new Error('Not connected to MySQL database'));
 
             this._createTable();
 
-            mysql.query(`SELECT * FROM \`${this.table}\``, [], (err, res) => {
-                if(err) return reject(err);
+            conn.query(`SELECT * FROM \`${this.table}\``, [], (err, res) => {
+                if (err) return reject(err);
 
                 resolve(res);
             })
@@ -213,10 +213,10 @@ class MySQL extends EventEmitter {
      */
     deleteAll() {
         return new Promise((resolve, reject) => {
-            if(this.connected === false) return reject(new Error('Not connected to MySQL database'));
+            if (this.connected === false) return reject(new Error('Not connected to MySQL database'));
 
-            mysql.query(`DROP TABLE \`${this.table}\``, [], (err, res) => {
-                if(err) return reject(err);
+            conn.query(`DROP TABLE \`${this.table}\``, [], (err, res) => {
+                if (err) return reject(err);
 
                 resolve(res);
             })
